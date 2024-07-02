@@ -94,7 +94,7 @@ const deleteUser = (id, callback) => {
 
 const getUserByRole = (role, callback) => {
   const query =
-    "SELECT id, name, email, phone_number, role FROM users WHERE role = ?";
+    "SELECT id, name, email, phone_number, status, role FROM users WHERE role = ?";
   db.query(query, [role], callback);
 };
 
