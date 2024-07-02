@@ -20,20 +20,25 @@ const initChatSocket = (server) => {
         });
 
         socket.on('sendMessage', async (data) => {
-            const { senderId, receiverId, message } = data; 
+            const { sender_id, receiver_id, message } = data;
             try {
-                const messageId = await createMessage(senderId, receiverId, message);
-                const roomName = `${Math.min(senderId, receiverId)}_${Math.max(senderId, receiverId)}`;
+                const messageId = await createMessage(sender_id, receiver_id, message);
+                const roomName = `${Math.min(sender_id, receiver_id)}_${Math.max(sender_id, receiver_id)}`;
                 io.to(roomName).emit('receiveMessage', {
                     messageId, 
-                    senderId,
-                    receiverId,
+                    sender_id,
+                    receiver_id,
                     message,
                     timestamp: new Date().toISOString(),
                 });
             } catch (error) {
                 console.error('Error sending message:', error);
             }
+        });
+
+        socket.on('joinRoom', (roomName) => {
+            socket.join(roomName);
+            console.log(`User joined room: ${roomName}`);
         });
 
         socket.on('disconnect', () => {
