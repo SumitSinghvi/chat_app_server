@@ -1,7 +1,7 @@
 // authController.js
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { createUser, getUserByEmail, getUserByUsername, getUserByPhone } from '../models/user.js';
+import { createUser, getUserByEmail, getUserByUsername, getUserByPhone, authUser } from '../models/user.js';
 import { validationResult } from 'express-validator';
 
 const register = async (req, res) => {
@@ -16,7 +16,7 @@ const register = async (req, res) => {
     getUserByEmail(email, (err, emailExists) => {
       if (err) {
         console.error(err);
-        return res.status(500).send('Server error');
+        return res.status(500).json({msg: 'Server error'});
       }
       if (emailExists.length > 0) {
         return res.status(400).json({ errors: [{ msg: 'Email already exists' }] });
@@ -25,7 +25,7 @@ const register = async (req, res) => {
       getUserByUsername(name, (err, usernameExists) => {
         if (err) {
           console.error(err);
-          return res.status(500).send('Server error');
+          return res.status(500).json({msg: 'Server error'});
         }
         if (usernameExists.length > 0) {
           return res.status(400).json({ errors: [{ msg: 'Username already exists' }] });
@@ -34,7 +34,7 @@ const register = async (req, res) => {
         getUserByPhone(phone, (err, phoneExists) => {
           if (err) {
             console.error(err);
-            return res.status(500).send('Server error');
+            return res.status(500).json({msg: 'Server error'});
           }
           if (phoneExists.length > 0) {
             return res.status(400).json({ errors: [{ msg: 'Phone number already exists' }] });
@@ -43,25 +43,40 @@ const register = async (req, res) => {
           bcrypt.hash(password, 10, async (err, hashedPassword) => {
             if (err) {
               console.error(err);
-              return res.status(500).send('Server error');
+              return res.status(500).json({msg: 'Server error'});
             }
 
             const newUser = { name, email, phone, role, password: hashedPassword };
             createUser(newUser, (err, results) => {
               if (err) {
                 console.error(err);
-                return res.status(500).send('Error creating user');
+                return res.status(500).json({msg: 'Server error'});
               }
             });
-
-            res.status(201).send('User registered successfully');
+            authUser(email, (err, results) => {
+              if (err) return res.status(500).json({msg: 'Server error 1'});
+              if (results.length === 0) return res.status(404).json({msg: 'user not found'});
+          
+              const user = results[0];
+          
+              bcrypt.compare(password, user.password, (err, isMatch) => {
+                if (err){
+                  console.log(err);
+                  return res.status(500).json({msg: 'Server error 2'});
+                } 
+                if (!isMatch) return res.status(401).json({msg: 'INvalid credentials'});
+          
+                const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '70h' });
+                res.status(200).json({ token, user });
+              });
+            });
           });
         });
       });
     });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Server error');
+    res.status(500).json({msg: 'Server error'});
   }
 };
 
@@ -70,21 +85,23 @@ const login = async(req, res) => {
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-
   const { email, password } = req.body;
 
-  getUserByEmail(email, (err, results) => {
-    if (err) return res.status(500).send('Server error');
-    if (results.length === 0) return res.status(404).send('User not found');
+  authUser(email, (err, results) => {
+    if (err) return res.status(500).json({msg: 'Server error 1'});
+    if (results.length === 0) return res.status(404).json({msg: 'user not found'});
 
     const user = results[0];
 
     bcrypt.compare(password, user.password, (err, isMatch) => {
-      if (err) return res.status(500).send('Server error');
-      if (!isMatch) return res.status(401).send('Invalid credentials');
+      if (err){
+        console.log(err);
+        return res.status(500).json({msg: 'Server error 2'});
+      } 
+      if (!isMatch) return res.status(401).json({msg: 'INvalid credentials'});
 
       const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '70h' });
-      res.json({ token, user });
+      res.status(200).json({ token, user });
     });
   });
 };

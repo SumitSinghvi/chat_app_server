@@ -4,8 +4,8 @@ import { validationResult } from 'express-validator';
 const readUser = async(req, res) => {
   const userId = req.body.id;
   getUserById(userId, (err, results) => {
-    if (err) return res.status(500).send('Server error');
-    if (results.length === 0) return res.status(404).send('User not found');
+    if (err) return res.status(500).json({msg: 'Server error'});
+    if (results.length === 0) return res.status(404).json({msg: 'user not found'});
 
     res.json(results[0]);
   });
@@ -13,8 +13,8 @@ const readUser = async(req, res) => {
 const getUserByRoles = async(req, res) => {
   const userRole = req.body.role;
   getUserByRole(userRole, (err, results) => {
-    if (err) return res.status(500).send('Server error');
-    if (results.length === 0) return res.status(404).send('User not found');
+    if (err) return res.status(500).json({msg: 'Server error'});
+    if (results.length === 0) return res.status(404).json({msg: 'user not found error'});
 
     res.json(results);
   });
@@ -28,12 +28,14 @@ const updateUserDetails = async(req, res) => {
 
   const userId = req.user.id;
   const { name, email, phone, role } = req.body;
-
   const updatedUser = { name, email, phone, role };
 
   updateUser(userId, updatedUser, (err, results) => {
-    if (err) return res.status(500).send('Server error');
-    res.json(results);
+    if (err) 
+      {
+        return res.status(500).send(err);
+      }
+      res.send(results)
   });
 };
 
@@ -41,7 +43,7 @@ const deleteUserAccount = async(req, res) => {
   const userId = req.user.id;
 
   deleteUser(userId, (err, results) => {
-    if (err) return res.status(500).send('server error');
+    if (err) return res.status(500).json({msg: 'Server error'});
     res.json(results ? "user deleted" : "not deleted");
   });
 };

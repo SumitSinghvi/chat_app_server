@@ -8,6 +8,6 @@ const router = express.Router();
 router.get('/profile', readUser);
 router.put('/profile', authenticateToken, validateUpdate, updateUserDetails);
 router.delete('/profile', authenticateToken, deleteUserAccount);
-router.get('/profiles', getUserByRoles);
+router.post('/profiles', getUserByRoles);
 
 export default router;
